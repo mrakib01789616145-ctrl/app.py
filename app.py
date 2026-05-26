@@ -101,9 +101,9 @@ def complete_task(task_type):
     
     # এখানে আপনার লিঙ্কগুলো বসিয়ে দিন
     if task_type == 'youtube':
-        return redirect("https://youtube.com/@YourLinkHere") 
+        return redirect("https://youtube.com/@rakibteachofficial?si=XKb75CYFD5bOeAdm") 
     else:
-        return redirect("https://t.me/YourGroupLinkHere")
+        return redirect("https://t.me/applex_income")
 
 @app.route('/logout')
 def logout():
