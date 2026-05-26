@@ -112,3 +112,42 @@ def logout():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
+# এটি app.py ফাইলের শেষে যুক্ত করুন
+
+@app.route('/withdraw_page', methods=['GET', 'POST'])
+def withdraw_page():
+    if 'user_id' not in session: return redirect(url_for('login'))
+    
+    db = get_db()
+    user = db.execute("SELECT * FROM users WHERE id = ?", (session['user_id'],)).fetchone()
+    message = ""
+
+    if request.method == 'POST':
+        amount = float(request.form['amount'])
+        if amount >= 50: # মিনিমাম উইথড্র ৫০ টাকা
+            if user['balance'] >= amount:
+                db.execute("UPDATE users SET balance = balance - ? WHERE id = ?", (amount, session['user_id']))
+                db.commit()
+                message = "সফলভাবে উইথড্র রিকোয়েস্ট পাঠানো হয়েছে!"
+            else:
+                message = "আপনার পর্যাপ্ত ব্যালেন্স নেই।"
+        else:
+            message = "মিনিমাম উইথড্র ৫০ টাকা।"
+    
+    db.close()
+    
+    # উইথড্র পেজের ডিজাইন
+    withdraw_html = f"""
+    <div style="text-align:center; padding:20px;">
+        <h3>উইথড্র পেজ</h3>
+        <p>আপনার ব্যালেন্স: ৳ {user['balance']}</p>
+        <p style="color:red;">{message}</p>
+        <form method="POST">
+            <input type="number" name="amount" placeholder="৳ ৫০ বা তার বেশি" required style="padding:10px;"><br><br>
+            <button type="submit" style="padding:10px 20px;">উইথড্র করুন</button>
+        </form>
+        <br><a href="/dashboard">ড্যাশবোর্ডে ফিরে যান</a>
+    </div>
+    """
+    return render_template_string(MASTER_HTML.replace('{% if page == \'dashboard\' %}', withdraw_html))
+    
