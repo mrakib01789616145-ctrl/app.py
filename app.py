@@ -3,9 +3,9 @@ import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.secret_key = "applex_final_pro_v8"
+app.secret_key = "applex_final_fixed_secure_v9"
 
-# ১. ডাটাবেজ ফাংশন এবং অটো-ফিক্স
+# ১. ডাটাবেজ কানেকশন এবং টেবিল সেটআপ
 def get_db():
     conn = sqlite3.connect('applex_main.db')
     conn.row_factory = sqlite3.Row
@@ -14,11 +14,10 @@ def get_db():
 def init_db():
     conn = get_db()
     cursor = conn.cursor()
-    # ইউজার টেবিল তৈরি এবং প্রয়োজনীয় সব কলাম নিশ্চিত করা
+    # এখানে আমরা নিশ্চিত করছি যে টেবিল এবং কলামগুলো ঠিক আছে
     cursor.execute('''CREATE TABLE IF NOT EXISTS users 
                      (id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                      first_name TEXT, last_name TEXT, email TEXT UNIQUE, 
-                      phone TEXT UNIQUE, password TEXT, 
+                      first_name TEXT, phone TEXT UNIQUE, password TEXT, 
                       refer_bal REAL DEFAULT 0.0, salary_bal REAL DEFAULT 0.0,
                       job_bal REAL DEFAULT 0.0, total_earn REAL DEFAULT 0.0,
                       total_withdraw REAL DEFAULT 0.0, free_earn REAL DEFAULT 0.0,
@@ -28,126 +27,126 @@ def init_db():
 
 init_db()
 
-# ২. ড্যাশবোর্ড ও লগইন ডিজাইন (আপনার স্ক্রিনশট অনুযায়ী)
+# ২. ড্যাশবোর্ড ও লগইন ইন্টারফেস ডিজাইন
 MASTER_HTML = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>APPLEX - Dashboard</title>
+    <title>APPLEX</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --primary: #d93025; --blue: #007bff; --bg: #f8f9fa; }
         body { font-family: 'Poppins', sans-serif; background: var(--bg); margin: 0; padding: 0; }
-        .header { background: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); position: sticky; top: 0; }
-        .logo { font-size: 24px; font-weight: bold; color: black; display: flex; align-items: center; gap: 8px; }
-        .container { max-width: 480px; margin: auto; padding: 15px; padding-bottom: 80px; }
-        
-        /* ৬টি ব্যালেন্স বক্স ডিজাইন */
+        .container { max-width: 480px; margin: auto; padding: 15px; }
+        .card { background: white; border-radius: 15px; padding: 25px; margin-top: 50px; border: 1px solid #eee; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center; }
+        .input-field { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; }
+        .btn-primary { width: 100%; padding: 14px; background: var(--blue); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .logo { font-size: 32px; font-weight: 900; margin-bottom: 10px; }
+        .logo i { color: var(--primary); }
         .balance-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 15px; }
-        .bal-box { background: white; padding: 15px 5px; border-radius: 12px; text-align: center; border: 1px solid #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
-        .bal-box b { font-size: 14px; color: #333; display: block; }
+        .bal-box { background: white; padding: 15px 5px; border-radius: 12px; text-align: center; border: 1px solid #eee; }
         .bal-box p { margin: 5px 0 0; color: var(--blue); font-weight: bold; font-size: 11px; }
-
-        /* কার্ড ডিজাইন */
-        .card-pro { background: linear-gradient(135deg, #667eea, #764ba2); color: white; border-radius: 15px; padding: 20px; margin-top: 20px; position: relative; }
-        .card-master { background: linear-gradient(135deg, #ff9a9e, #fad0c4); color: #333; border-radius: 15px; padding: 20px; margin-top: 15px; }
-        .btn-white { background: white; color: #764ba2; border: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        
-        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid #ddd; max-width: 480px; left: 50%; transform: translateX(-50%); }
-        .nav-item { text-align: center; color: #666; text-decoration: none; font-size: 11px; flex: 1; }
-        .nav-item i { font-size: 20px; margin-bottom: 3px; }
-        
-        /* লগইন ডিজাইন */
-        .login-card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); text-align: center; margin-top: 50px; }
-        .input-f { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; }
     </style>
 </head>
 <body>
 
-{% if page == 'dashboard' %}
-    <div class="header">
-        <div class="logo"><i class="fas fa-apple-alt" style="color:var(--primary);"></i> APPLEX</div>
-        <div><i class="fas fa-search"></i> &nbsp; <i class="fas fa-bell"></i></div>
-    </div>
+{% if page == 'login' %}
     <div class="container">
-        <h4 style="margin-bottom:5px;">Dashboard</h4>
-        <p style="font-size:12px; color:gray; margin:0;">Welcome, <b>{{ user['first_name'] }}</b> | Level: <span style="color:green;">{{ user['level'] }}</span></p>
-        
-        <div class="balance-grid">
-            <div class="bal-box"><b>Tk. {{ user['refer_bal'] }}</b><p>Refer</p></div>
-            <div class="bal-box"><b>Tk. {{ user['salary_bal'] }}</b><p>Salary</p></div>
-            <div class="bal-box"><b>Tk. {{ user['job_bal'] }}</b><p>Job</p></div>
-            <div class="bal-box"><b>Tk. {{ user['total_earn'] }}</b><p>Total Earning</p></div>
-            <div class="bal-box"><b>Tk. {{ user['total_withdraw'] }}</b><p>Withdraw</p></div>
-            <div class="bal-box"><b>Tk. {{ user['free_earn'] }}</b><p>Free Earn</p></div>
-        </div>
-
-        <div class="card-pro">
-            <h4 style="margin:0;">True Level (৳ ১০০)</h4>
-            <p style="font-size:12px;">প্রতিদিন ৫টি টাস্ক এবং মাসিক ইনকাম সুবিধা পান।</p>
-            <button class="btn-white">Upgrade Now</button>
-        </div>
-
-        <div class="card-master">
-            <h4 style="margin:0;">Master Level (৳ ৩০০)</h4>
-            <p style="font-size:12px;">আনলিমিটেড টাস্ক এবং ডাবল রেফারেল কমিশন।</p>
-            <button class="btn-white" style="color:#d93025;">Unlock Master</button>
-        </div>
-    </div>
-
-{% elif page == 'login' %}
-    <div class="container">
-        <div class="login-card">
-            <div class="logo" style="justify-content:center; font-size:30px;"><i class="fas fa-apple-alt" style="color:var(--primary);"></i> APPLEX</div>
+        <div class="card">
+            <div class="logo"><i class="fas fa-apple-alt"></i> APPLEX</div>
             <h3>Login Account</h3>
-            {% if error %}<p style="color:red; font-size:12px;">{{ error }}</p>{% endif %}
+            {% if error %}<p style="color:red; font-size:13px;">{{ error }}</p>{% endif %}
             <form method="POST">
-                <input type="tel" name="phone" class="input-f" placeholder="Phone Number" required>
-                <input type="password" name="pass" class="input-f" placeholder="Password" required>
-                <button type="submit" style="background:var(--blue); color:white; width:100%; padding:14px; border:none; border-radius:10px; font-weight:bold; margin-top:10px;">Login Now</button>
+                <input type="tel" name="phone" class="input-field" placeholder="Phone Number" required>
+                <input type="password" name="pass" class="input-field" placeholder="Password" required>
+                <button type="submit" class="btn-primary">Login Now</button>
             </form>
-            <p style="font-size:13px; margin-top:20px;">New member? <a href="/signup" style="color:var(--blue);">Create Account</a></p>
+            <p style="font-size:13px; margin-top:15px;">New member? <a href="/signup">Create Account</a></p>
         </div>
     </div>
-{% endif %}
 
-{% if page == 'dashboard' %}
-<div class="bottom-nav">
-    <a href="/dashboard" class="nav-item" style="color:var(--blue);"><i class="fas fa-home"></i><br>Home</a>
-    <a href="#" class="nav-item"><i class="fas fa-list-ul"></i><br>Job/Task</a>
-    <a href="#" class="nav-item"><i class="fas fa-wallet"></i><br>Deposit</a>
-    <a href="#" class="nav-item"><i class="fas fa-user"></i><br>Profile</a>
-</div>
+{% elif page == 'signup' %}
+    <div class="container">
+        <div class="card">
+            <div class="logo"><i class="fas fa-apple-alt"></i> APPLEX</div>
+            <h3>Sign Up</h3>
+            {% if error %}<p style="color:red; font-size:13px;">{{ error }}</p>{% endif %}
+            <form method="POST">
+                <input type="text" name="f_name" class="input-field" placeholder="Your Name" required>
+                <input type="tel" name="phone" class="input-field" placeholder="Phone Number" required>
+                <input type="password" name="pass" class="input-field" placeholder="Password" required>
+                <button type="submit" class="btn-primary">Create Account</button>
+            </form>
+            <p style="font-size:13px; margin-top:15px;">Already have account? <a href="/login">Login</a></p>
+        </div>
+    </div>
+
+{% elif page == 'dashboard' %}
+    <div class="container">
+        <div style="background:white; padding:15px; border-radius:15px; margin-top:20px;">
+            <h4>Welcome, {{ user['first_name'] }}</h4>
+            <div class="balance-grid">
+                <div class="bal-box"><b>Tk. {{ user['refer_bal'] }}</b><p>Refer</p></div>
+                <div class="bal-box"><b>Tk. {{ user['salary_bal'] }}</b><p>Salary</p></div>
+                <div class="bal-box"><b>Tk. {{ user['job_bal'] }}</b><p>Job</p></div>
+                <div class="bal-box"><b>Tk. {{ user['total_earn'] }}</b><p>Earn</p></div>
+                <div class="bal-box"><b>Tk. {{ user['total_withdraw'] }}</b><p>Withdraw</p></div>
+                <div class="bal-box"><b>Tk. {{ user['free_earn'] }}</b><p>Free</p></div>
+            </div>
+            <br>
+            <a href="/logout" style="color:red; text-decoration:none;">Logout</a>
+        </div>
+    </div>
 {% endif %}
 
 </body>
 </html>
 """
 
-# --- ROUTES ---
+# --- রাউটস (Routes) ---
+
 @app.route('/')
-def index():
-    return redirect(url_for('dashboard'))
+def home():
+    if 'user_id' in session: return redirect(url_for('dashboard'))
+    return redirect(url_for('login'))
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        name = request.form.get('f_name')
+        phone = request.form.get('phone')
+        # পাসওয়ার্ডটি এনক্রিপ্ট করা হচ্ছে যাতে এটি নিরাপদে ডাটাবেজে থাকে
+        password = generate_password_hash(request.form.get('pass'))
+        
+        try:
+            conn = get_db()
+            conn.execute("INSERT INTO users (first_name, phone, password) VALUES (?, ?, ?)", (name, phone, password))
+            conn.commit()
+            conn.close()
+            return redirect(url_for('login'))
+        except:
+            return render_template_string(MASTER_HTML, page='signup', error="এই নম্বর দিয়ে আইডি অলরেডি আছে!")
+    return render_template_string(MASTER_HTML, page='signup')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        phone, password = request.form['phone'], request.form['pass']
+        phone = request.form.get('phone')
+        password = request.form.get('pass')
+        
         conn = get_db()
         user = conn.execute("SELECT * FROM users WHERE phone = ?", (phone,)).fetchone()
         conn.close()
+        
+        # এখানে পাসওয়ার্ড এবং ফোন নম্বর হুবহু ম্যাচ করানো হচ্ছে
         if user and check_password_hash(user['password'], password):
             session['user_id'] = user['id']
             return redirect(url_for('dashboard'))
-        return render_template_string(MASTER_HTML, page='login', error="ভুল নম্বর বা পাসওয়ার্ড!")
+        else:
+            return render_template_string(MASTER_HTML, page='login', error="ভুল নম্বর বা পাসওয়ার্ড!")
     return render_template_string(MASTER_HTML, page='login')
-
-@app.route('/signup', methods=['GET', 'POST'])
-def signup():
-    # সাইনআপ লজিক এখানে (আগের মতোই)
-    pass
 
 @app.route('/dashboard')
 def dashboard():
@@ -156,6 +155,11 @@ def dashboard():
     user = conn.execute("SELECT * FROM users WHERE id = ?", (session['user_id'],)).fetchone()
     conn.close()
     return render_template_string(MASTER_HTML, page='dashboard', user=user)
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
