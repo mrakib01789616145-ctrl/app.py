@@ -84,7 +84,23 @@ def signup():
     return render_template_string(MASTER_HTML, page='signup')
 
 @app.route('/dashboard')
+def dashboard():@app.route('/dashboard')
 def dashboard():
+    if 'user_id' not in session: 
+        return redirect(url_for('login'))
+    
+    db = get_db()
+    # ডাটাবেজ থেকে ইউজারের তথ্য খুঁজে বের করা
+    user = db.execute("SELECT * FROM users WHERE id = ?", (session['user_id'],)).fetchone()
+    db.close()
+    
+    # যদি ইউজার পাওয়া না যায়, তবে লগইন পেজে পাঠিয়ে দেওয়া
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
+        
+    return render_template_string(MASTER_HTML, page='dashboard', user=user)
+    
     if 'user_id' not in session: return redirect(url_for('login'))
     db = get_db()
     user = db.execute("SELECT * FROM users WHERE id = ?", (session['user_id'],)).fetchone()
