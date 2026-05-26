@@ -14,7 +14,6 @@ def get_db():
     conn.commit()
     return conn
 
-# মাস্টার এইচটিএমএল ডিজাইন
 MASTER_HTML = """
 <!DOCTYPE html>
 <html lang="bn">
@@ -23,8 +22,8 @@ MASTER_HTML = """
     <div style="background:white; padding:20px; border-radius:10px; max-width:400px; margin:auto;">
         <h2>APPLEX</h2>
         {% if page == 'dashboard' %}
-            <h3 style="color:#333;">স্বাগতম, {{ user['name'] }}</h3>
-            <p style="font-size:20px; color:blue;">আপনার ব্যালেন্স: ৳ {{ user['balance'] }}</p>
+            <h3>স্বাগতম, {{ user['name'] }}</h3>
+            <p>আপনার ব্যালেন্স: ৳ {{ user['balance'] }}</p>
             <div style="margin:20px 0;">
                 <a href="/complete_task/youtube" style="display:block; padding:12px; background:red; color:white; text-decoration:none; border-radius:5px; margin-bottom:10px;">YouTube সাবস্ক্রাইব (৳2)</a>
                 <a href="/complete_task/telegram" style="display:block; padding:12px; background:blue; color:white; text-decoration:none; border-radius:5px;">Telegram জয়েন (৳2)</a>
@@ -33,7 +32,7 @@ MASTER_HTML = """
         {% elif page == 'verify' %}
             <h3>সাবস্ক্রাইব করেছেন কি?</h3>
             <a href="{{ link }}" target="_blank" style="padding:10px; background:green; color:white; text-decoration:none; border-radius:5px;">লিঙ্কে যান</a><br><br>
-            <a href="/verify_task/{{ task_type }}" style="padding:10px; background:blue; color:white; text-decoration:none; border-radius:5px;">আমি সাবস্ক্রাইব করেছি (টাকা নিন)</a>
+            <a href="/verify_task/{{ task_type }}" style="padding:10px; background:blue; color:white; text-decoration:none; border-radius:5px;">আমি সাবস্ক্রাইব করেছি</a>
         {% elif page == 'login' %}
             <form method="POST" action="/login">
                 <input type="text" name="phone" placeholder="Phone" required style="padding:10px; width:80%; margin:5px;"><br>
@@ -84,23 +83,7 @@ def signup():
     return render_template_string(MASTER_HTML, page='signup')
 
 @app.route('/dashboard')
-def dashboard():@app.route('/dashboard')
 def dashboard():
-    if 'user_id' not in session: 
-        return redirect(url_for('login'))
-    
-    db = get_db()
-    # ডাটাবেজ থেকে ইউজারের তথ্য খুঁজে বের করা
-    user = db.execute("SELECT * FROM users WHERE id = ?", (session['user_id'],)).fetchone()
-    db.close()
-    
-    # যদি ইউজার পাওয়া না যায়, তবে লগইন পেজে পাঠিয়ে দেওয়া
-    if not user:
-        session.clear()
-        return redirect(url_for('login'))
-        
-    return render_template_string(MASTER_HTML, page='dashboard', user=user)
-    
     if 'user_id' not in session: return redirect(url_for('login'))
     db = get_db()
     user = db.execute("SELECT * FROM users WHERE id = ?", (session['user_id'],)).fetchone()
@@ -110,21 +93,22 @@ def dashboard():
 @app.route('/complete_task/<task_type>')
 def complete_task(task_type):
     if 'user_id' not in session: return redirect(url_for('login'))
-    
-    # এখানে ইউজারকে আগে লিঙ্কে যেতে হবে
-    link = "https://youtube.com/@rakibteachofficial?si=wTN-YxUasRJ-xzko" if task_type == 'youtube' else "https://t.me/applex_income"
-    
-    # এখানে 'verify' পেজটি দেখাবে যেখানে শুধু লিঙ্কটি থাকবে
+    link = "https://youtube.com/@rakibteachofficial?si=bWuAFPjbwqKGZdKJ" if task_type == 'youtube' else "https://t.me/applex_income"
     return render_template_string(MASTER_HTML, page='verify', link=link, task_type=task_type)
 
 @app.route('/verify_task/<task_type>')
 def verify_task(task_type):
     if 'user_id' not in session: return redirect(url_for('login'))
-    
-    # যখন ইউজার এই বাটনে ক্লিক করবে, তখনই কেবল টাকা যোগ হবে
     db = get_db()
     db.execute("UPDATE users SET balance = balance + 2 WHERE id = ?", (session['user_id'],))
     db.commit()
     db.close()
-    
-    return "টাস্ক সম্পন্ন হয়েছে! ব্যালেন্স যোগ করা হয়েছে। <a href='/dashboard'>ড্যাশবোর্ডে ফিরে যান</a>"
+    return "টাস্ক সম্পন্ন হয়েছে! <a href='/dashboard'>ড্যাশবোর্ডে ফিরে যান</a>"
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('home'))
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8080)
