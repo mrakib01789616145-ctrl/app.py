@@ -14,6 +14,7 @@ def get_db():
     conn.commit()
     return conn
 
+# ডিজাইনসহ মাস্টার এইচটিএমএল
 MASTER_HTML = """
 <!DOCTYPE html>
 <html lang="bn">
@@ -29,23 +30,21 @@ MASTER_HTML = """
                 <a href="/complete_task/telegram" style="display:block; padding:12px; background:blue; color:white; text-decoration:none; border-radius:5px;">Telegram জয়েন (৳2)</a>
             </div>
             <a href="/logout" style="color:red;">Logout</a>
-        {% elif page == 'verify' %}
-            <h3>সাবস্ক্রাইব করেছেন কি?</h3>
-            <a href="{{ link }}" target="_blank" style="padding:10px; background:green; color:white; text-decoration:none; border-radius:5px;">লিঙ্কে যান</a><br><br>
-            <a href="/verify_task/{{ task_type }}" style="padding:10px; background:blue; color:white; text-decoration:none; border-radius:5px;">আমি সাবস্ক্রাইব করেছি</a>
+        {% elif page == 'go_to_link' %}
+            <h3>ধাপ ১: সাবস্ক্রাইব করুন</h3>
+            <p>আগে লিঙ্কে গিয়ে কাজটি সম্পন্ন করুন</p>
+            <a href="{{ link }}" target="_blank" style="padding:12px 20px; background:green; color:white; text-decoration:none; border-radius:5px;">লিঙ্কে যান (YouTube/Telegram)</a>
+            <br><br>
+            <a href="/verify_step/{{ task_type }}" style="padding:12px 20px; background:orange; color:white; text-decoration:none; border-radius:5px;">কাজ শেষ? এখানে ক্লিক করুন</a>
+        {% elif page == 'verify_final' %}
+            <h3>ধাপ ২: কনফার্ম করুন</h3>
+            <p>আপনি কি কাজটি সম্পন্ন করেছেন?</p>
+            <a href="/verify_task/{{ task_type }}" style="padding:15px; background:blue; color:white; text-decoration:none; border-radius:5px;">হ্যাঁ, আমি সাবস্ক্রাইব করেছি (টাকা নিন)</a>
         {% elif page == 'login' %}
             <form method="POST" action="/login">
                 <input type="text" name="phone" placeholder="Phone" required style="padding:10px; width:80%; margin:5px;"><br>
                 <input type="password" name="pass" placeholder="Password" required style="padding:10px; width:80%; margin:5px;"><br>
                 <button type="submit" style="padding:10px 20px;">Login</button>
-            </form>
-            <p><a href="/signup">নতুন একাউন্ট</a></p>
-        {% elif page == 'signup' %}
-            <form method="POST" action="/signup">
-                <input type="text" name="name" placeholder="Name" required style="padding:10px; width:80%; margin:5px;"><br>
-                <input type="text" name="phone" placeholder="Phone" required style="padding:10px; width:80%; margin:5px;"><br>
-                <input type="password" name="pass" placeholder="Password" required style="padding:10px; width:80%; margin:5px;"><br>
-                <button type="submit" style="padding:10px 20px;">Sign Up</button>
             </form>
         {% endif %}
     </div>
@@ -70,18 +69,6 @@ def login():
         return "ভুল ফোন বা পাসওয়ার্ড!"
     return render_template_string(MASTER_HTML, page='login')
 
-@app.route('/signup', methods=['GET', 'POST'])
-def signup():
-    if request.method == 'POST':
-        try:
-            db = get_db()
-            db.execute("INSERT INTO users (name, phone, password, balance) VALUES (?, ?, ?, 0)", (request.form['name'], request.form['phone'], request.form['pass']))
-            db.commit()
-            db.close()
-            return redirect(url_for('login'))
-        except: return "এই নম্বরটি ইতিমধ্যে ব্যবহৃত হয়েছে!"
-    return render_template_string(MASTER_HTML, page='signup')
-
 @app.route('/dashboard')
 def dashboard():
     if 'user_id' not in session: return redirect(url_for('login'))
@@ -93,8 +80,12 @@ def dashboard():
 @app.route('/complete_task/<task_type>')
 def complete_task(task_type):
     if 'user_id' not in session: return redirect(url_for('login'))
-    link = "https://youtube.com/@rakibteachofficial?si=bWuAFPjbwqKGZdKJ" if task_type == 'youtube' else "https://t.me/applex_income"
-    return render_template_string(MASTER_HTML, page='verify', link=link, task_type=task_type)
+    link = "https://youtube.com/@rakibteachofficial?si=0RAIeEgd1GNwKtAJ" if task_type == 'youtube' else "https://t.me/applex_income"
+    return render_template_string(MASTER_HTML, page='go_to_link', link=link, task_type=task_type)
+
+@app.route('/verify_step/<task_type>')
+def verify_step(task_type):
+    return render_template_string(MASTER_HTML, page='verify_final', task_type=task_type)
 
 @app.route('/verify_task/<task_type>')
 def verify_task(task_type):
@@ -103,7 +94,7 @@ def verify_task(task_type):
     db.execute("UPDATE users SET balance = balance + 2 WHERE id = ?", (session['user_id'],))
     db.commit()
     db.close()
-    return "টাস্ক সম্পন্ন হয়েছে! <a href='/dashboard'>ড্যাশবোর্ডে ফিরে যান</a>"
+    return "টাস্ক সফল হয়েছে! <a href='/dashboard'>ড্যাশবোর্ডে ফিরে যান</a>"
 
 @app.route('/logout')
 def logout():
