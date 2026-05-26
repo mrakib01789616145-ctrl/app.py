@@ -110,22 +110,21 @@ def dashboard():
 @app.route('/complete_task/<task_type>')
 def complete_task(task_type):
     if 'user_id' not in session: return redirect(url_for('login'))
-    link = "https://youtube.com/@rakibteachofficial?si=vkFrM4uZ7DcqzDDa" if task_type == 'youtube' else "https://t.me/applex_income"
+    
+    # এখানে ইউজারকে আগে লিঙ্কে যেতে হবে
+    link = "https://youtube.com/@rakibteachofficial?si=wTN-YxUasRJ-xzko" if task_type == 'youtube' else "https://t.me/applex_income"
+    
+    # এখানে 'verify' পেজটি দেখাবে যেখানে শুধু লিঙ্কটি থাকবে
     return render_template_string(MASTER_HTML, page='verify', link=link, task_type=task_type)
 
 @app.route('/verify_task/<task_type>')
 def verify_task(task_type):
     if 'user_id' not in session: return redirect(url_for('login'))
+    
+    # যখন ইউজার এই বাটনে ক্লিক করবে, তখনই কেবল টাকা যোগ হবে
     db = get_db()
     db.execute("UPDATE users SET balance = balance + 2 WHERE id = ?", (session['user_id'],))
     db.commit()
     db.close()
-    return "টাস্ক সম্পন্ন হয়েছে! <a href='/dashboard'>ড্যাশবোর্ডে ফিরে যান</a>"
-
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect(url_for('home'))
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080)
+    
+    return "টাস্ক সম্পন্ন হয়েছে! ব্যালেন্স যোগ করা হয়েছে। <a href='/dashboard'>ড্যাশবোর্ডে ফিরে যান</a>"
